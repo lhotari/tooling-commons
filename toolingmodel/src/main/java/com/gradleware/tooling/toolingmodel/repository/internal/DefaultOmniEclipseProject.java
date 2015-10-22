@@ -22,7 +22,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+
+import com.gradleware.tooling.toolingmodel.OmniEclipseBuildCommand;
 import com.gradleware.tooling.toolingmodel.OmniEclipseLinkedResource;
+import com.gradleware.tooling.toolingmodel.OmniEclipseNature;
 import com.gradleware.tooling.toolingmodel.OmniEclipseProject;
 import com.gradleware.tooling.toolingmodel.OmniEclipseProjectDependency;
 import com.gradleware.tooling.toolingmodel.OmniEclipseSourceDirectory;
@@ -31,6 +34,7 @@ import com.gradleware.tooling.toolingmodel.Path;
 import org.gradle.api.specs.Spec;
 import org.gradle.tooling.model.DomainObjectSet;
 import org.gradle.tooling.model.ExternalDependency;
+import org.gradle.tooling.model.eclipse.BuildCommand;
 import org.gradle.tooling.model.eclipse.EclipseLinkedResource;
 import org.gradle.tooling.model.eclipse.EclipseProject;
 import org.gradle.tooling.model.eclipse.EclipseProjectDependency;
@@ -56,6 +60,8 @@ public final class DefaultOmniEclipseProject implements OmniEclipseProject {
     private ImmutableList<OmniExternalDependency> externalDependencies;
     private ImmutableList<OmniEclipseLinkedResource> linkedResources;
     private ImmutableList<OmniEclipseSourceDirectory> sourceDirectories;
+    private Optional<List<OmniEclipseNature>> natures;
+    private Optional<List<OmniEclipseBuildCommand>> builders;
 
     private DefaultOmniEclipseProject(Comparator<? super OmniEclipseProject> comparator) {
         this.hierarchyHelper = new HierarchyHelper<OmniEclipseProject>(this, Preconditions.checkNotNull(comparator));
@@ -134,6 +140,24 @@ public final class DefaultOmniEclipseProject implements OmniEclipseProject {
     }
 
     @Override
+    public Optional<List<OmniEclipseNature>> getNatures() {
+        return this.natures;
+    }
+
+    public void setNatures(Optional<List<OmniEclipseNature>> natures) {
+        this.natures = natures;
+    }
+
+    @Override
+    public Optional<List<OmniEclipseBuildCommand>> getBuildCommands() {
+        return this.builders;
+    }
+
+    public void setBuildCommands(Optional<List<OmniEclipseBuildCommand>> builders) {
+        this.builders = builders;
+    }
+
+    @Override
     public OmniEclipseProject getRoot() {
         return this.hierarchyHelper.getRoot();
     }
@@ -183,6 +207,20 @@ public final class DefaultOmniEclipseProject implements OmniEclipseProject {
         eclipseProject.setLinkedResources(toLinkedResources(project.getLinkedResources()));
         eclipseProject.setSourceDirectories(toSourceDirectories(project.getSourceDirectories()));
 
+        List<String> natures = project.getProjectNatures(null);
+        if (natures == null) {
+            eclipseProject.setNatures(Optional.<List<OmniEclipseNature>>absent());
+        } else {
+            eclipseProject.setNatures(Optional.<List<OmniEclipseNature>>of(toNatures(natures)));
+        }
+
+        List<? extends BuildCommand> builders = project.getBuildCommands(null);
+        if (builders == null) {
+            eclipseProject.setBuildCommands(Optional.<List<OmniEclipseBuildCommand>>absent());
+        } else {
+            eclipseProject.setBuildCommands(Optional.<List<OmniEclipseBuildCommand>>of(toBuildCommands(builders)));
+        }
+
         for (EclipseProject child : project.getChildren()) {
             DefaultOmniEclipseProject eclipseChildProject = from(child);
             eclipseProject.addChild(eclipseChildProject);
@@ -230,6 +268,26 @@ public final class DefaultOmniEclipseProject implements OmniEclipseProject {
             @Override
             public OmniEclipseSourceDirectory apply(EclipseSourceDirectory input) {
                 return DefaultOmniEclipseSourceDirectory.from(input);
+            }
+        }).toList();
+    }
+
+    private static List<OmniEclipseNature> toNatures(List<String> natures) {
+        return FluentIterable.from(natures).transform(new Function<String, OmniEclipseNature>() {
+
+            @Override
+            public OmniEclipseNature apply(String nature) {
+                return new DefaultOmniEclipseNature(nature);
+            }
+        }).toList();
+    }
+
+    private static List<OmniEclipseBuildCommand> toBuildCommands(List<? extends BuildCommand> builders) {
+        return FluentIterable.from(builders).transform(new Function<BuildCommand, OmniEclipseBuildCommand>(){
+
+            @Override
+            public OmniEclipseBuildCommand apply(BuildCommand builder) {
+                return new DefaultOmniEclipseBuildCommand(builder.getName(), builder.getArguments());
             }
         }).toList();
     }
