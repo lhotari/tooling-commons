@@ -18,6 +18,11 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
         this.participants = participants;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * The only allowed model type that can be requested is {@link com.gradleware.tooling.toolingmodel.substitution.EclipseWorkspace}.
+     */
     @Override
     public <T> T getModel(Class<T> modelType) throws GradleConnectionException, IllegalStateException {
         if (!modelType.isInterface()) {
@@ -29,11 +34,16 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
         }
 
 
-        Set<EclipseProject> openProjects = populate();
+        Set<EclipseProject> openProjects = populateModel();
         return (T) new DefaultEclipseWorkspace(openProjects);
     }
 
-    private Set<EclipseProject> populate() {
+    /**
+     * Returns the set of projects found on any level of the hierarchy. Excludes the root project.
+     *
+     * @return set of projects
+     */
+    private Set<EclipseProject> populateModel() {
         Set<EclipseProject> collectedProjects = new HashSet<EclipseProject>();
 
         for (ProjectConnection participant : participants) {
@@ -41,7 +51,7 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
             DomainObjectSet<? extends EclipseProject> children = eclipseProject.getChildren();
 
             if (!children.isEmpty()) {
-                traverseProjects(eclipseProject, collectedProjects);
+                traverseProjectHierarchy(eclipseProject, collectedProjects);
             } else {
                 collectedProjects.add(eclipseProject);
             }
@@ -50,13 +60,13 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
         return collectedProjects;
     }
 
-    private void traverseProjects(EclipseProject parentProject, Set<EclipseProject> eclipseProjects) {
+    private void traverseProjectHierarchy(EclipseProject parentProject, Set<EclipseProject> eclipseProjects) {
         DomainObjectSet<? extends EclipseProject> children = parentProject.getChildren();
 
         if (!children.isEmpty()) {
             for (EclipseProject childProject : children) {
                 eclipseProjects.add(childProject);
-                traverseProjects(childProject, eclipseProjects);
+                traverseProjectHierarchy(childProject, eclipseProjects);
             }
         }
     }

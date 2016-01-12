@@ -10,11 +10,13 @@ import java.util.Set;
 public class DefaultGradleCompositeBuilder extends GradleCompositeBuilder {
     private final Set<ProjectConnection> participants = new HashSet<ProjectConnection>();
 
+    @Override
     public GradleCompositeBuilder withParticipant(ProjectConnection participant) {
         participants.add(participant);
         return this;
     }
 
+    @Override
     public GradleCompositeBuild build() {
         return new DefaultGradleCompositeBuild(participants);
     }
