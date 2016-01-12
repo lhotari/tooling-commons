@@ -34,21 +34,30 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
     }
 
     private Set<EclipseProject> populate() {
-        Set<EclipseProject> eclipseProjects = new HashSet<EclipseProject>();
+        Set<EclipseProject> collectedProjects = new HashSet<EclipseProject>();
 
         for (ProjectConnection participant : participants) {
             EclipseProject eclipseProject = participant.getModel(EclipseProject.class);
             DomainObjectSet<? extends EclipseProject> children = eclipseProject.getChildren();
 
             if (!children.isEmpty()) {
-                for (EclipseProject childProject : children) {
-                    eclipseProjects.add(childProject);
-                }
+                traverseProjects(eclipseProject, collectedProjects);
             } else {
-                eclipseProjects.add(eclipseProject);
+                collectedProjects.add(eclipseProject);
             }
         }
 
-        return eclipseProjects;
+        return collectedProjects;
+    }
+
+    private void traverseProjects(EclipseProject parentProject, Set<EclipseProject> eclipseProjects) {
+        DomainObjectSet<? extends EclipseProject> children = parentProject.getChildren();
+
+        if (!children.isEmpty()) {
+            for (EclipseProject childProject : children) {
+                eclipseProjects.add(childProject);
+                traverseProjects(childProject, eclipseProjects);
+            }
+        }
     }
 }
