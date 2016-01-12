@@ -4,6 +4,7 @@ import com.gradleware.tooling.toolingmodel.substitution.EclipseWorkspace;
 import com.gradleware.tooling.toolingmodel.substitution.GradleCompositeBuild;
 import org.gradle.tooling.GradleConnectionException;
 import org.gradle.tooling.ProjectConnection;
+import org.gradle.tooling.model.DomainObjectSet;
 import org.gradle.tooling.model.eclipse.EclipseProject;
 
 import java.util.HashSet;
@@ -37,7 +38,15 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
 
         for (ProjectConnection participant : participants) {
             EclipseProject eclipseProject = participant.getModel(EclipseProject.class);
-            eclipseProjects.add(eclipseProject);
+            DomainObjectSet<? extends EclipseProject> children = eclipseProject.getChildren();
+
+            if (!children.isEmpty()) {
+                for (EclipseProject childProject : children) {
+                    eclipseProjects.add(childProject);
+                }
+            } else {
+                eclipseProjects.add(eclipseProject);
+            }
         }
 
         return eclipseProjects;
