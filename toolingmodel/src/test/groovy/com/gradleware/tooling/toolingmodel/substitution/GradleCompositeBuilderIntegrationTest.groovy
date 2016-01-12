@@ -67,7 +67,7 @@ class GradleCompositeBuilderIntegrationTest extends Specification {
         project1Connection?.close()
     }
 
-    def "can create composite with multiple participating project"() {
+    def "can create composite with multiple participating projects"() {
         given:
         File project1 = directoryProvider.createDir('project-1')
         createBuildFileWithDependency(project1, 'commons-lang:commons-lang:2.6')
@@ -106,6 +106,29 @@ class GradleCompositeBuilderIntegrationTest extends Specification {
         eclipseWorkspace.openProjects.size() == 2
         assertExternalDependencyForProject(eclipseWorkspace, 'sub-1', new ExternalDependency(group: 'commons-lang', name: 'commons-lang', version: '2.6'))
         assertExternalDependencyForProject(eclipseWorkspace, 'sub-2', new ExternalDependency(group: 'log4j', name: 'log4j', version: '1.2.17'))
+
+        cleanup:
+        project1Connection?.close()
+    }
+
+    def "can create composite for subproject in a single participating multi-project build"() {
+        given:
+        File rootProjectDir = directoryProvider.createDir('multi-project')
+        File subProject = new File(rootProjectDir, 'sub')
+        File subSubProject = new File(subProject, 'sub-sub')
+        createBuildFileWithDependency(subProject, 'commons-lang:commons-lang:2.6')
+        createBuildFileWithDependency(subSubProject, 'log4j:log4j:1.2.17')
+        createSettingsFile(rootProjectDir, ['sub', 'sub:sub-sub'])
+
+        when:
+        ProjectConnection project1Connection = createProjectConnection(subSubProject)
+        GradleCompositeBuild gradleCompositeBuild = createCompositeBuild(project1Connection)
+        EclipseWorkspace eclipseWorkspace = gradleCompositeBuild.getModel(EclipseWorkspace)
+
+        then:
+        eclipseWorkspace.openProjects.size() == 2
+        assertExternalDependencyForProject(eclipseWorkspace, 'sub', new ExternalDependency(group: 'commons-lang', name: 'commons-lang', version: '2.6'))
+        assertExternalDependencyForProject(eclipseWorkspace, 'sub-sub', new ExternalDependency(group: 'log4j', name: 'log4j', version: '1.2.17'))
 
         cleanup:
         project1Connection?.close()

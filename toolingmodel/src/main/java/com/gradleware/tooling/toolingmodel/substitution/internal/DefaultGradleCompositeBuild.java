@@ -47,17 +47,25 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
         Set<EclipseProject> collectedProjects = new HashSet<EclipseProject>();
 
         for (ProjectConnection participant : participants) {
-            EclipseProject eclipseProject = participant.getModel(EclipseProject.class);
-            DomainObjectSet<? extends EclipseProject> children = eclipseProject.getChildren();
+            EclipseProject rootProject = determineRootProject(participant.getModel(EclipseProject.class));
+            DomainObjectSet<? extends EclipseProject> children = rootProject.getChildren();
 
             if (!children.isEmpty()) {
-                traverseProjectHierarchy(eclipseProject, collectedProjects);
+                traverseProjectHierarchy(rootProject, collectedProjects);
             } else {
-                collectedProjects.add(eclipseProject);
+                collectedProjects.add(rootProject);
             }
         }
 
         return collectedProjects;
+    }
+
+    private EclipseProject determineRootProject(EclipseProject eclipseProject) {
+        if (eclipseProject.getParent() == null) {
+            return eclipseProject;
+        }
+
+        return determineRootProject(eclipseProject.getParent());
     }
 
     private void traverseProjectHierarchy(EclipseProject parentProject, Set<EclipseProject> eclipseProjects) {
