@@ -10,7 +10,43 @@ import spock.lang.Specification
 class GradleCompositeBuilderIntegrationTest extends Specification {
 
     @Rule
-    TestDirectoryProvider directoryProvider = new TestDirectoryProvider();
+    TestDirectoryProvider directoryProvider = new TestDirectoryProvider()
+
+    def "cannot request model that is not an interface"() {
+        given:
+        File project1 = directoryProvider.createDir('project-1')
+        createBuildFileWithDependency(project1, 'commons-lang:commons-lang:2.6')
+
+        when:
+        ProjectConnection project1Connection = createProjectConnection(project1)
+        GradleCompositeBuild gradleCompositeBuild = createCompositeBuild(project1Connection)
+        gradleCompositeBuild.getModel(String)
+
+        then:
+        Throwable t = thrown(IllegalArgumentException)
+        t.message == "Cannot fetch a model of type 'java.lang.String' as this type is not an interface."
+
+        cleanup:
+        project1Connection?.close()
+    }
+
+    def "cannot request model for unknown model"() {
+        given:
+        File project1 = directoryProvider.createDir('project-1')
+        createBuildFileWithDependency(project1, 'commons-lang:commons-lang:2.6')
+
+        when:
+        ProjectConnection project1Connection = createProjectConnection(project1)
+        GradleCompositeBuild gradleCompositeBuild = createCompositeBuild(project1Connection)
+        gradleCompositeBuild.getModel(List)
+
+        then:
+        Throwable t = thrown(IllegalArgumentException)
+        t.message == "The only supported model for a Gradle composite is EclipseWorkspace.class."
+
+        cleanup:
+        project1Connection?.close()
+    }
 
     def "can create composite build with single participating project"() {
         given:
