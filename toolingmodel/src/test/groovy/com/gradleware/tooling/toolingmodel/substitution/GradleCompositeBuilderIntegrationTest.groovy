@@ -194,7 +194,6 @@ class GradleCompositeBuilderIntegrationTest extends Specification {
         project2Connection?.close()
     }
 
-    @NotYetImplemented
     def "can create composite with participating projects that have duplicate names"() {
         given:
         File project1 = directoryProvider.createDir('project-1-root/project')
