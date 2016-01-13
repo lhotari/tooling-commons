@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.gradle.plugins.ide.internal.configurer
+package com.gradleware.tooling.toolingmodel.substitution.deduper
 
-import org.gradle.api.Project
+import org.gradle.tooling.model.HierarchicalElement
 
 class DeduplicationTarget {
-    def Project project
-    def String moduleName
-    def Closure updateModuleName
+    HierarchicalElement project
+    String moduleName
+    Closure<?> updateModuleName
 
     boolean deduplicated = false
 }

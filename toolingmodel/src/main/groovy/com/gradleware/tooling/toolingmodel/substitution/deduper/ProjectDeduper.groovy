@@ -14,29 +14,31 @@
  * limitations under the License.
  */
 
-package org.gradle.plugins.ide.internal.configurer
+package com.gradleware.tooling.toolingmodel.substitution.deduper
 
-import com.google.common.collect.Lists
-import org.gradle.api.Project
+import groovy.transform.CompileStatic
+import org.gradle.tooling.model.HierarchicalElement
 
+@CompileStatic
 class ProjectDeduper {
+    ModuleNameDeduper moduleNameDeduper = new ModuleNameDeduper()
 
-    def moduleNameDeduper = new ModuleNameDeduper()
-
-    void dedupe(Collection<Project> projects, Closure createDeduplicationTarget) {
+    void dedupe(Collection<HierarchicalElement> projects, Closure<DeduplicationTarget> createDeduplicationTarget) {
         //Deduper acts on first-come first-served basis.
         //Therefore it's better if the inputs are sorted that first items are least wanted to be prefixed
         //Hence I'm sorting by nesting level:
-        def sorted = projects.sort { (it.parent == null) ? 0 : it.path.count(":") }
-        def deduplicationTargets = sorted.collect({ createDeduplicationTarget(it) })
+        def sorted = projects.sort { projectDepth(it) }
+        Collection<DeduplicationTarget> deduplicationTargets = sorted.collect({ createDeduplicationTarget(it) })
         moduleNameDeduper.dedupe(deduplicationTargets)
     }
 
-    String removeDuplicateWords(String givenProjectName) {
-        def wordlist = Lists.newArrayList(givenProjectName.split("-"))
-        if (wordlist.size() > 2) {
-            wordlist = wordlist.unique()
+    private int projectDepth(HierarchicalElement element) {
+        HierarchicalElement current = element
+        int depth = 0
+        while (current != null) {
+            depth++
+            current = (element.parent != current) ? element.parent : null
         }
-        return wordlist.join("-")
+        depth
     }
 }
