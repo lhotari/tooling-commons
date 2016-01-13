@@ -32,7 +32,10 @@ dependencies {
   compile "org.slf4j:slf4j-api:$slf4jVersion"
   testCompile project(':testing-crossversion')
   testCompile project(':testing-junit')
-  testCompile "org.spockframework:spock-core:$spockVersion"
+  testCompile "org.codehaus.groovy:groovy-all:$groovyVersion"
+  testCompile "org.spockframework:spock-core:$spockVersion", {
+    exclude module: 'groovy-all'
+  }
   testCompile "nl.jqno.equalsverifier:equalsverifier:$equalsverifierVersion"
   testRuntime "cglib:cglib-nodep:$cglibVersion"
   testRuntime "org.objenesis:objenesis:$objenesisVersion"

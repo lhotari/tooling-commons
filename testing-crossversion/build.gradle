@@ -28,7 +28,10 @@ dependencies {
   compile project(':toolingclient')
   compile "org.gradle:gradle-tooling-api:$toolingApiVersion"
   compile "com.google.guava:guava:$guavaVersion"
-  testCompile "org.spockframework:spock-core:$spockVersion"
+  testCompile "org.codehaus.groovy:groovy-all:$groovyVersion"
+  testCompile "org.spockframework:spock-core:$spockVersion", {
+    exclude module: 'groovy-all'
+  }
   testRuntime "cglib:cglib-nodep:$cglibVersion"
   testRuntime "org.objenesis:objenesis:$objenesisVersion"
 }
