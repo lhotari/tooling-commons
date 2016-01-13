@@ -24,7 +24,10 @@ if (hasProperty('GRADLE_REPO_URL')) {
   }
 }
 
+apply plugin: 'groovy'
+
 dependencies {
+  compile "org.codehaus.groovy:groovy-all:$groovyVersion"
   compile project(':toolingutils')
   compile project(':toolingclient')
   compile "org.gradle:gradle-tooling-api:$toolingApiVersion"
