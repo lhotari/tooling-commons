@@ -218,6 +218,35 @@ class GradleCompositeBuilderIntegrationTest extends Specification {
         project2Connection?.close()
     }
 
+    def "can create composite with participating projects that have duplicate names in project hierarchy"() {
+        given:
+        File rootProjectDir1 = directoryProvider.createDir('multi-project-1')
+        createBuildFileWithDependency(new File(rootProjectDir1, 'sub-a'), 'commons-lang:commons-lang:2.6')
+        createBuildFileWithDependency(new File(rootProjectDir1, 'sub-b'), 'log4j:log4j:1.2.17')
+        createSettingsFile(rootProjectDir1, ['sub-a', 'sub-b'])
+
+        File rootProjectDir2 = directoryProvider.createDir('multi-project-2')
+        createBuildFileWithDependency(new File(rootProjectDir2, 'sub-a'), 'commons-lang:commons-lang:2.6')
+        createBuildFileWithDependency(new File(rootProjectDir2, 'sub-b'), 'log4j:log4j:1.2.17')
+        createSettingsFile(rootProjectDir2, ['sub-a', 'sub-b'])
+
+        when:
+        ProjectConnection project1Connection = createProjectConnection(rootProjectDir1)
+        ProjectConnection project2Connection = createProjectConnection(rootProjectDir2)
+        GradleCompositeBuild gradleCompositeBuild = createCompositeBuild(project1Connection, project2Connection)
+        EclipseWorkspace eclipseWorkspace = gradleCompositeBuild.getModel(EclipseWorkspace)
+        def projects = eclipseWorkspace.openProjects
+
+        then:
+        projects.size() == 4
+        projects*.name as Set == ['multi-project-1-sub-a', 'multi-project-1-sub-b', 'multi-project-2-sub-a', 'multi-project-2-sub-b'] as Set
+
+        cleanup:
+        project1Connection?.close()
+        project2Connection?.close()
+    }
+
+
 
     private ProjectConnection createProjectConnection(File projectDir) {
         GradleConnector.newConnector().forProjectDirectory(projectDir).connect()
