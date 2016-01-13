@@ -1,5 +1,6 @@
 package com.gradleware.tooling.toolingmodel.substitution.internal;
 
+import com.gradleware.tooling.toolingmodel.substitution.deduper.EclipseProjectDeduper;
 import org.gradle.internal.UncheckedException;
 import org.gradle.internal.event.ListenerNotificationException;
 import org.gradle.tooling.*;
@@ -74,10 +75,16 @@ public class EclipseWorkspaceModelBuilder<T> extends AbstractLongRunningOperatio
                 return operationParameters;
             }
             public T run(ConsumerConnection connection) {
-                Set<EclipseProject> openProjects = populateModel();
+                Set<EclipseProject> openProjects = deduplicate(populateModel());
                 return (T) new DefaultEclipseWorkspace(openProjects);
             }
         }, new DefaultResultHandler<T>(handler));
+    }
+
+    private Set<EclipseProject> deduplicate(Set<EclipseProject> openProjects) {
+        Set<EclipseProject> projects = new HashSet<EclipseProject>();
+        projects.addAll(new EclipseProjectDeduper().dedup(openProjects));
+        return projects;
     }
 
     /**
