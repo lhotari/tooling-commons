@@ -3,18 +3,23 @@ package com.gradleware.tooling.toolingmodel.substitution.internal;
 import com.gradleware.tooling.toolingmodel.substitution.EclipseWorkspace;
 import com.gradleware.tooling.toolingmodel.substitution.GradleCompositeBuild;
 import org.gradle.tooling.GradleConnectionException;
+import org.gradle.tooling.ModelBuilder;
 import org.gradle.tooling.ProjectConnection;
-import org.gradle.tooling.model.DomainObjectSet;
-import org.gradle.tooling.model.eclipse.EclipseProject;
+import org.gradle.tooling.ResultHandler;
+import org.gradle.tooling.internal.consumer.ConnectionParameters;
+import org.gradle.tooling.internal.consumer.async.AsyncConsumerActionExecutor;
 
-import java.util.HashSet;
 import java.util.Set;
 
 public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
 
+    private final AsyncConsumerActionExecutor connection;
+    private final ConnectionParameters parameters;
     private final Set<ProjectConnection> participants;
 
-    public DefaultGradleCompositeBuild(Set<ProjectConnection> participants) {
+    public DefaultGradleCompositeBuild(AsyncConsumerActionExecutor connection, ConnectionParameters parameters, Set<ProjectConnection> participants) {
+        this.connection = connection;
+        this.parameters = parameters;
         this.participants = participants;
     }
 
@@ -25,6 +30,26 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
      */
     @Override
     public <T> T getModel(Class<T> modelType) throws GradleConnectionException, IllegalStateException {
+        return model(modelType).get();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * The only allowed model type that can be requested is {@link com.gradleware.tooling.toolingmodel.substitution.EclipseWorkspace}.
+     */
+    @Override
+    public <T> void getModel(Class<T> modelType, ResultHandler<? super T> handler) throws IllegalStateException {
+        model(modelType).get(handler);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * The only allowed model type that can be requested is {@link com.gradleware.tooling.toolingmodel.substitution.EclipseWorkspace}.
+     */
+    @Override
+    public <T> ModelBuilder<T> model(Class<T> modelType) {
         if (!modelType.isInterface()) {
             throw new IllegalArgumentException(String.format("Cannot fetch a model of type '%s' as this type is not an interface.", modelType.getName()));
         }
@@ -33,49 +58,6 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
             throw new IllegalArgumentException("The only supported model for a Gradle composite is EclipseWorkspace.class.");
         }
 
-
-        Set<EclipseProject> openProjects = populateModel();
-        return (T) new DefaultEclipseWorkspace(openProjects);
-    }
-
-    /**
-     * Returns the set of projects found on any level of the hierarchy. Excludes the root project.
-     *
-     * @return set of projects
-     */
-    private Set<EclipseProject> populateModel() {
-        Set<EclipseProject> collectedProjects = new HashSet<EclipseProject>();
-
-        for (ProjectConnection participant : participants) {
-            EclipseProject rootProject = determineRootProject(participant.getModel(EclipseProject.class));
-            DomainObjectSet<? extends EclipseProject> children = rootProject.getChildren();
-
-            if (!children.isEmpty()) {
-                traverseProjectHierarchy(rootProject, collectedProjects);
-            } else {
-                collectedProjects.add(rootProject);
-            }
-        }
-
-        return collectedProjects;
-    }
-
-    private EclipseProject determineRootProject(EclipseProject eclipseProject) {
-        if (eclipseProject.getParent() == null) {
-            return eclipseProject;
-        }
-
-        return determineRootProject(eclipseProject.getParent());
-    }
-
-    private void traverseProjectHierarchy(EclipseProject parentProject, Set<EclipseProject> eclipseProjects) {
-        DomainObjectSet<? extends EclipseProject> children = parentProject.getChildren();
-
-        if (!children.isEmpty()) {
-            for (EclipseProject childProject : children) {
-                eclipseProjects.add(childProject);
-                traverseProjectHierarchy(childProject, eclipseProjects);
-            }
-        }
+        return new EclipseWorkspaceModelBuilder<T>(modelType, connection, parameters, participants);
     }
 }
