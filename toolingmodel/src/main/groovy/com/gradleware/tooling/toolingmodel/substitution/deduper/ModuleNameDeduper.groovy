@@ -69,23 +69,36 @@ class ModuleNameDeduper {
             def notYetDedupped = targetsToDeduplicate.findAll { !it.deduplicated }
 
             if (notYetDedupped.size() > 1) {
-                notYetDedupped.each { dedupTarget(it, prefixMap) }
+                notYetDedupped.each { dedupTarget(it, prefixMap, targets) }
             } else {
-                targetsToDeduplicate.findAll { !notYetDedupped.contains(it) }.each { dedupTarget(it, prefixMap) }
+                targetsToDeduplicate.findAll { !notYetDedupped.contains(it) }.each {
+                    dedupTarget(it, prefixMap, targets)
+                }
 
                 if (targetsToDeduplicate.every { it.moduleName == duplicateProjectName }) {
-                    notYetDedupped.each { dedupTarget(it, prefixMap) }
+                    notYetDedupped.each { dedupTarget(it, prefixMap, targets) }
                 }
             }
         }
     }
 
-    def dedupTarget(DeduplicationTarget target, Map<HierarchicalElement, HierarchicalElement> prefixMap) {
+    def dedupTarget(DeduplicationTarget target, Map<HierarchicalElement, HierarchicalElement> prefixMap, Collection<DeduplicationTarget> targets) {
         HierarchicalElement prefixProjectName = prefixMap.get(target.project)
         if (prefixProjectName != null) {
             target.moduleName = prefixProjectName.name + "-" + target.moduleName
             prefixMap.put(target.project, prefixProjectName.parent)
             target.deduplicated = true
+        } else {
+            int count = 0
+            while (true) {
+                count++
+                String candidateName = target.moduleName + (count > 1 ? String.valueOf(count) : "")
+                if (!targets.any { it.moduleName == candidateName && it.deduplicated }) {
+                    target.moduleName = candidateName
+                    target.deduplicated = true
+                    break
+                }
+            }
         }
     }
 
@@ -94,21 +107,26 @@ class ModuleNameDeduper {
             return deduppedProjectName
         }
 
-        def prefix = deduppedProjectName.substring(0, deduppedProjectName.lastIndexOf(originalProjectName))
-        List<String> prefixWordList = Lists.newArrayList(prefix.split("-"))
-        List<String> postfixWordList = Lists.newArrayList(originalProjectName.split("-"))
-        if (postfixWordList.size() > 1) {
-            prefixWordList.add(postfixWordList.head())
-            postfixWordList = postfixWordList.tail()
-        }
-
-        List<String> words = (List<String>) prefixWordList.inject([]) { words, newWord ->
-            if (words.isEmpty() || !words.last().equals(newWord)) {
-                words.add(newWord)
+        def pos = deduppedProjectName.lastIndexOf(originalProjectName)
+        if (pos > 0) {
+            def prefix = deduppedProjectName.substring(0, pos)
+            List<String> prefixWordList = Lists.newArrayList(prefix.split("-"))
+            List<String> postfixWordList = Lists.newArrayList(originalProjectName.split("-"))
+            if (postfixWordList.size() > 1) {
+                prefixWordList.add(postfixWordList.head())
+                postfixWordList = postfixWordList.tail()
             }
-            words
+
+            List<String> words = (List<String>) prefixWordList.inject([]) { words, newWord ->
+                if (words.isEmpty() || !words.last().equals(newWord)) {
+                    words.add(newWord)
+                }
+                words
+            }
+            words.addAll(postfixWordList)
+            return words.join("-")
+        } else {
+            return deduppedProjectName
         }
-        words.addAll(postfixWordList)
-        return words.join("-")
     }
 }
