@@ -1,6 +1,7 @@
 package com.gradleware.tooling.toolingmodel.substitution
 
 import com.gradleware.tooling.junit.TestDirectoryProvider
+import groovy.transform.NotYetImplemented
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ProjectConnection
 import org.gradle.tooling.model.GradleModuleVersion
@@ -192,6 +193,31 @@ class GradleCompositeBuilderIntegrationTest extends Specification {
         project1Connection?.close()
         project2Connection?.close()
     }
+
+    @NotYetImplemented
+    def "can create composite with participating projects that have duplicate names"() {
+        given:
+        File project1 = directoryProvider.createDir('project-1-root/project')
+        createBuildFileWithDependency(project1, 'commons-lang:commons-lang:2.6')
+        File project2 = directoryProvider.createDir('project-2-root/project')
+        createBuildFileWithDependency(project2, 'log4j:log4j:1.2.17')
+
+        when:
+        ProjectConnection project1Connection = createProjectConnection(project1)
+        ProjectConnection project2Connection = createProjectConnection(project2)
+        GradleCompositeBuild gradleCompositeBuild = createCompositeBuild(project1Connection, project2Connection)
+        EclipseWorkspace eclipseWorkspace = gradleCompositeBuild.getModel(EclipseWorkspace)
+        def projects = eclipseWorkspace.openProjects
+
+        then:
+        projects.size() == 2
+        projects*.name as Set == ['project', 'project2'] as Set
+
+        cleanup:
+        project1Connection?.close()
+        project2Connection?.close()
+    }
+
 
     private ProjectConnection createProjectConnection(File projectDir) {
         GradleConnector.newConnector().forProjectDirectory(projectDir).connect()
