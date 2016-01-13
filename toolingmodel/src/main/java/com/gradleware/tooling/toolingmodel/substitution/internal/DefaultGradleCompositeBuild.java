@@ -2,6 +2,7 @@ package com.gradleware.tooling.toolingmodel.substitution.internal;
 
 import com.gradleware.tooling.toolingmodel.substitution.EclipseWorkspace;
 import com.gradleware.tooling.toolingmodel.substitution.GradleCompositeBuild;
+import com.gradleware.tooling.toolingmodel.substitution.deduper.EclipseProjectDeduper;
 import org.gradle.tooling.GradleConnectionException;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.tooling.model.DomainObjectSet;
@@ -35,7 +36,13 @@ public class DefaultGradleCompositeBuild implements GradleCompositeBuild {
 
 
         Set<EclipseProject> openProjects = populateModel();
-        return (T) new DefaultEclipseWorkspace(openProjects);
+        return (T) new DefaultEclipseWorkspace(deduplicate(openProjects));
+    }
+
+    private Set<EclipseProject> deduplicate(Set<EclipseProject> openProjects) {
+        Set<EclipseProject> projects = new HashSet<EclipseProject>();
+        projects.addAll(new EclipseProjectDeduper().dedup(openProjects));
+        return projects;
     }
 
     /**
