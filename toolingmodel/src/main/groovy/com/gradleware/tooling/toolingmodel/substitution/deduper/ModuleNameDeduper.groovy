@@ -42,11 +42,12 @@ class ModuleNameDeduper {
             doDedup(targets, projectToPrefixMap)
         }
 
-        List<String> deduplicatedProjectNames = targets.collect { it.moduleName }
+        Set<String> deduplicatedProjectNames = targets.collect { it.moduleName } as Set
         targets.each { target ->
             def simplifiedProjectName = removeDuplicateWordsFromPrefix(target.moduleName, originalProjectNames.get(target))
             if (!deduplicatedProjectNames.contains(simplifiedProjectName)) {
                 target.moduleName = simplifiedProjectName
+                deduplicatedProjectNames.add(simplifiedProjectName)
             }
             target.updateModuleName.call(target.moduleName)
         }
